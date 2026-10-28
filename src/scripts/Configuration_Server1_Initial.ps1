@@ -76,3 +76,94 @@ Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True `
 #------------------------------------------
 # Configuratie netwerkinstellingen
 #------------------------------------------
+
+Write-Host "`n=== CONFIGURATIE NETWERKINSTELLINGEN ===`n" -ForegroundColor Cyan
+
+# Ophalen van de interface index die zal gebruikt worden voor het privé netwerk
+$ifIndex = (Get-NetIPInterface -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq $hostonlyAdapter }).InterfaceIndex
+
+# Configuratie IP instellingen
+$huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Out-Null
+
+if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
+    Write-Host "[OK] De netwerkinstellingen werden reeds geconfigureerd" -ForegroundColor green
+
+} else {
+    Write-Host "[...] Uitschakelen DHCP" -ForegroundColor Yellow
+    Set-NetIPInterface -InterfaceIndex $ifIndex -Dhcp Disabled
+    Write-Host "[OK] DHCP werd uitgeschakeld" -ForegroundColor Green
+
+    Write-Host "[...] Bestaande IP-instellingen verwijderen" -ForegroundColor Yellow
+    Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
+    Get-NetRoute -InterfaceIndex $ifIndex -AddressFamily IPv4 | Where-Object { $_.DestinationPrefix -eq "0.0.0.0/0" } | Remove-NetRoute -Confirm:$false
+    Write-Host "[OK] Bestaande IP-instellingen werden verwijderd" -ForegroundColor Green
+
+    Write-Host "[...] Configureren IP-instellingen" -ForegroundColor Yellow
+    New-NetIPAddress -InterfaceIndex $ifIndex `
+                 -IPAddress $ipAdres `
+                 -PrefixLength $subnetMask `
+                 -DefaultGateway $gateway
+    Write-Host "[OK] IP-instellingen werden geconfigureerd" -ForegroundColor Green
+
+    Write-Host "[...] DNS instellen op server1" -ForegroundColor Yellow
+    Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses "192.168.26.10"
+    Write-Host "[OK] DNS werd ingesteld op server1" -ForegroundColor Green
+
+}
+
+
+# Geef Host-only adapter een lagere metric
+Set-NetIPInterface -InterfaceAlias $hostonlyAdapter -InterfaceMetric 10 | Out-Null
+Set-NetIPInterface -InterfaceAlias $natAdapter -InterfaceMetric 50 | Out-Null
+
+
+# Uitschakelen DNS-registratie van de NAT-adapter
+Set-DnsClient `
+    -InterfaceAlias $natAdapter `
+    -RegisterThisConnectionsAddress $false | Out-Null
+
+Set-DnsClient `
+    -InterfaceAlias $natAdapter `
+    -UseSuffixWhenRegistering $false | Out-Null
+
+
+#-------------------------------------------
+# Configuratie Active Directory
+#-------------------------------------------
+
+Write-Host "`n=== CONFIGURATIE ACTIVE DIRECTORY ===`n" -ForegroundColor Cyan
+
+# Installeren Active Directory Rol
+if(-not (get-WindowsFeature AD-Domain-Services).Installed) {
+    Write-Host "[...] Installeren AD-rol" -ForegroundColor Yellow
+    Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
+    Write-Host "[OK] AD-rol werd succesvol geïnstalleerd" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] AD-rol werd reeds geïnstalleerd" -ForegroundColor Green
+
+}
+
+# Promotie tot domeincontroller
+$isDC = (Get-CimInstance -ClassName Win32_ComputerSystem).DomainRole -ge 4
+
+if(-not $isDC) {
+    Write-Host "[...] Promoveren tot domeincontroller" -ForegroundColor Yellow
+
+    Import-Module ADDSDeployment
+    Install-ADDSForest `
+       -DomainName $domein `
+       -DomainNetbiosName  $domein_Netbios `
+       -ForestMode Win2025 `
+       -DomainMode Win2025 `
+       -InstallDns:$true `
+       -SafeModeAdministratorPassword $SecureStringPassword `
+       -Force:$true
+
+    Write-Host "[OK] Server werd succesvol gepromoveerd tot domeincontroller" -ForegroundColor Green
+    Write-Host "[INFO] Server zal worden herstart" -ForegroundColor Yellow
+
+} else {
+    Write-Host "[OK] Server werd reeds gepromoveerd tot domeincontroller"
+
+}
