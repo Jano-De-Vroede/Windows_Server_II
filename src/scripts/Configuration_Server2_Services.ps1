@@ -44,11 +44,6 @@ do {
 
 } until ($zoneOk -or $pogingen -ge 10)
 
-# Herstart NetLogon
-Write-Host "[INFO] NetLogon herstarten" -ForegroundColor Yellow
-Restart-Service Netlogon | Out-Null
-nltest /dsregdns | Out-Null
-
 # Aanmaken secundaire forward zone
 if (-not (Get-DnsServerZone -Name $forwardZone -ErrorAction SilentlyContinue)) {
     Write-Host "[...] Aanmaken van de secundaire zone: $forwardZone" -ForegroundColor Yellow

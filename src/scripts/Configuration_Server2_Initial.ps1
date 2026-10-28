@@ -78,21 +78,24 @@ $ifIndex = (Get-NetIPInterface -AddressFamily IPv4 | Where-Object { $_.Interface
 $huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
 
 if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
-    Write-Host "[OK] De netwerkinstellingen zijn reeds correct ingesteld" -ForegroundColor Green
+    Write-Host "[OK] De netwerkinstellingen werden reeds geconfigureerd" -ForegroundColor green
 
 } else {
     Write-Host "[...] Uitschakelen DHCP" -ForegroundColor Yellow
     Set-NetIPInterface -InterfaceIndex $ifIndex -Dhcp Disabled
+    Write-Host "[OK] DHCP werd uitgeschakeld" -ForegroundColor Green
 
     Write-Host "[...] Bestaande IP-instellingen verwijderen" -ForegroundColor Yellow
     Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
     Get-NetRoute -InterfaceIndex $ifIndex -AddressFamily IPv4 | Where-Object { $_.DestinationPrefix -eq "0.0.0.0/0" } | Remove-NetRoute -Confirm:$false
+    Write-Host "[OK] Bestaande IP-instellingen werden verwijderd" -ForegroundColor Green
 
     Write-Host "[...] Configureren IP-instellingen" -ForegroundColor Yellow
     New-NetIPAddress -InterfaceIndex $ifIndex `
                  -IPAddress $ipAdres `
                  -PrefixLength $subnetMask `
                  -DefaultGateway $gateway | Out-Null
+    Write-Host "[OK] IP-instellingen werden geconfigureerd" -ForegroundColor Green
 
     Write-Host "[...] DNS instellen op server1" -ForegroundColor Yellow
     Set-DnsClientServerAddress -InterfaceAlias $hostonlyAdapter -ServerAddresses "192.168.26.10"
@@ -125,10 +128,10 @@ Write-Host "`n=== TOEVOEGEN AAN DOMEIN ===`n" -ForegroundColor Cyan
 
 # Server toevoegen aan domein
 if ((Get-CimInstance Win32_ComputerSystem).Domain -eq $domein) {
-    Write-Host "[OK] Server2 is reeds lid van $domein" -ForegroundColor Green
+    Write-Host "[OK] Server is reeds lid van $domein" -ForegroundColor Green
 
 } else {
-    Write-Host "[...] Server2 wordt toegevoegd aan $domein..." -ForegroundColor Yellow
+    Write-Host "[...] Server wordt toegevoegd aan $domein..." -ForegroundColor Yellow
     Add-Computer -DomainName $domein -Credential $credentials -Restart -Force
     Write-Host "[INFO] Server wordt herstart" -ForegroundColor Yellow
 
