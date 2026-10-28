@@ -234,6 +234,18 @@ foreach ($a in $aRecords) {
     }
 }
 
+# Aanmaken reverse zone voor 192.168.26.0/24
+$zoneBestaat = Get-DnsServerZone -Name $reverseZone -ErrorAction SilentlyContinue
+
+if (-not $zoneBestaat) {
+    Write-Host "[...] Aanmaken Reverse zone: 26.168.192.in-addr.arpa" -ForegroundColor Yellow
+    Add-DnsServerPrimaryZone -NetworkId "192.168.26.0/24" -ReplicationScope "Domain" -DynamicUpdate None
+    Write-Host "[OK] Reverse zone: 26.168.192.in-addr.arpa werd succesvol aangemaakt" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] Reverse zone 26.168.192.in-addr.arpa bestaat reeds" -ForegroundColor green
+}
+
 # Toevoegen benodigde PTR-recors
 foreach ($ptr in $ptrRecords) {
     $existingPtr = Get-DnsServerResourceRecord -ZoneName $reverseZone -Name $ptr.Naam -RRType Ptr -ErrorAction SilentlyContinue

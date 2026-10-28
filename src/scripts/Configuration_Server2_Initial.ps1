@@ -92,7 +92,7 @@ if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
     New-NetIPAddress -InterfaceIndex $ifIndex `
                  -IPAddress $ipAdres `
                  -PrefixLength $subnetMask `
-                 -DefaultGateway $gateway
+                 -DefaultGateway $gateway | Out-Null
 
     Write-Host "[...] DNS instellen op server1" -ForegroundColor Yellow
     Set-DnsClientServerAddress -InterfaceAlias $hostonlyAdapter -ServerAddresses "192.168.26.10"
@@ -101,12 +101,12 @@ if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
 }
 
 # Geef Host-only adapter een lagere metric
-Write-Host "[INFO] Host-only adapter voorrang geven op NAT adapter"
+Write-Host "[INFO] Host-only adapter voorrang geven op NAT adapter" -ForegroundColor Yellow
 Set-NetIPInterface -InterfaceAlias $hostonlyAdapter -InterfaceMetric 10 | Out-Null
 Set-NetIPInterface -InterfaceAlias $natAdapter -InterfaceMetric 50 | Out-Null
 
 # Uitschakelen DNS-registratie van de NAT-adapter
-Write-Host "[INFO] DNS-registratie uitschakelen voor NAT adapter"
+Write-Host "[INFO] DNS-registratie uitschakelen voor NAT adapter" -ForegroundColor Yellow
 Set-DnsClient `
     -InterfaceAlias $natAdapter `
     -RegisterThisConnectionsAddress $false | Out-Null
