@@ -39,7 +39,7 @@ Vagrant.configure("2") do |config|
       # VirtualBox Group
       vb.customize ["modifyvm", :id, "--groups", "/WS2"]
       # 2GB vRAM
-      vb.memory = "3072"
+      vb.memory = "2048"
       # 2vCPU
       vb.cpus = "2"
     end
@@ -54,7 +54,7 @@ Vagrant.configure("2") do |config|
     server2.vm.provider "virtualbox" do |vb|
       vb.name = "server2"
       vb.customize ["modifyvm", :id, "--groups", "/WS2"]
-      vb.memory = "3072"
+      vb.memory = "2048"
       vb.cpus = "2"
     end
   end
@@ -68,7 +68,7 @@ Vagrant.configure("2") do |config|
     server3.vm.provider "virtualbox" do |vb|
       vb.name = "server3"
       vb.customize ["modifyvm", :id, "--groups", "/WS2"]
-      vb.memory = "3072"
+      vb.memory = "2048"
       vb.cpus = "2"
     end
   end
@@ -89,6 +89,6 @@ Vagrant.configure("2") do |config|
 
   # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
   # Dan kan je eventueel de timeout aanpassen in onderstaande regel. De standaard timeout is 300 seconden (5 minuten), maar is nu al aangepast naar 600 seconden (10 minuten).
-  config.vm.boot_timeout = 12000
+  config.vm.boot_timeout = 2400
 end
   

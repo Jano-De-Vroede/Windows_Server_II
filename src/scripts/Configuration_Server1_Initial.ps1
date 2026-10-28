@@ -106,13 +106,14 @@ if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
     Write-Host "[OK] IP-instellingen werden geconfigureerd" -ForegroundColor Green
 
     Write-Host "[...] DNS instellen op server1" -ForegroundColor Yellow
-    Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses "192.168.26.10"
+    Set-DnsClientServerAddress -InterfaceAlias $hostonlyAdapter -ServerAddresses "192.168.26.10"
     Write-Host "[OK] DNS werd ingesteld op server1" -ForegroundColor Green
 
 }
 
 
 # Geef Host-only adapter een lagere metric
+Write-Host "[INFO] Host-only adapter voorrang geven op NAT adapter"
 Set-NetIPInterface -InterfaceAlias $hostonlyAdapter -InterfaceMetric 10 | Out-Null
 Set-NetIPInterface -InterfaceAlias $natAdapter -InterfaceMetric 50 | Out-Null
 
@@ -125,6 +126,8 @@ Set-DnsClient `
 Set-DnsClient `
     -InterfaceAlias $natAdapter `
     -UseSuffixWhenRegistering $false | Out-Null
+
+Clear-DnsClientCache | Out-Null
 
 
 #-------------------------------------------
