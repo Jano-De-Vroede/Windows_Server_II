@@ -47,6 +47,12 @@ $aRecords = @(
     @{ Naam = "server3"; IP = "192.168.26.30" }
 )
 
+$ptrRecords = @(
+    @{ Naam = "10"; FQDN = "server1.WS26-JDV.hogent" }
+    @{ Naam = "20"; FQDN = "server2.WS26-JDV.hogent" }
+    @{ Naam = "30"; FQDN = "server3.WS26-JDV.hogent" }
+)
+
 # Variabelen IIS
 $domein = "WS26-JDV.hogent"
 $hoofdMap = "C:\inetpub\intranet"
@@ -228,6 +234,20 @@ foreach ($a in $aRecords) {
     }
 }
 
+# Toevoegen benodigde PTR-recors
+foreach ($ptr in $ptrRecords) {
+    $existingPtr = Get-DnsServerResourceRecord -ZoneName $reverseZone -Name $ptr.Naam -RRType Ptr -ErrorAction SilentlyContinue
+    if (-not $existingPtr) {
+        Write-Host "[...] Toevoegen PTR-record: $($ptr.Naam) -> $($ptr.FQDN) " -ForegroundColor Yellow
+        Add-DnsServerResourceRecordPtr -Name $ptr.Naam -ZoneName $reverseZone -PtrDomainName $ptr.FQDN
+        Write-Host "[OK] PTR-record: $($ptr.Naam) -> $($ptr.FQDN) werd succesvol toegevoegd " -ForegroundColor green
+
+    } else {
+        Write-Host "[OK] PTR-record $($ptr.Naam) bestaat reeds" -ForegroundColor green
+
+    }
+}
+
 # Toevoegen NS records voor secundaire DNS server
 $nsForward = Get-DnsServerResourceRecord -ZoneName $forwardZone -RRType NS -ErrorAction SilentlyContinue | Where-Object { $_.RecordData.NameServer -eq "$secundaireDNS." }
 
@@ -258,3 +278,88 @@ Write-Host "[INFO] Toelaten zonetransfers naar $secundaireDNS" -ForegroundColor 
 Set-DnsServerPrimaryZone -Name $forwardZone -SecureSecondaries TransferToSecureServers -SecondaryServers $secundaireIP -Notify Notify
 Set-DnsServerPrimaryZone -Name $reverseZone -SecureSecondaries TransferToSecureServers -SecondaryServers $secundaireIP -Notify Notify
 
+#-------------------------------------------
+# Configuratie IIS webserver
+#-------------------------------------------
+
+Write-Host "`n=== CONFIGUREREN IIS WEBSERVER ===`n" -ForegroundColor Cyan
+
+# Installeren IIS webserver rol
+if(-not (get-WindowsFeature Web-Server).Installed) {
+    Write-Host "[...] Installeren van de IIS webserver rol" -ForegroundColor Yellow
+    Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+    Write-Host "[OK] De IIS webserver rol werd succesvol geïnstalleerd" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] De IIS webserver rol werd reeds geïnstalleerd" -ForegroundColor Green
+
+}
+
+# Aanmaken index.html
+if(-not(Test-Path -Path $html)) {
+    Write-Host "[...] Aanmaken van de index.html pagina" -ForegroundColor Yellow
+    Set-Content -Path $html -Value $inhoud -NoNewline
+    Write-Host "[OK] De index.html pagina werd succesvol aangemaakt" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] De index.html pagina bestaat reeds" -ForegroundColor Green
+
+} 
+
+# Opstarten default website
+if ((Get-WebsiteState -Name "Default Web Site").Value -ne "Started") {
+    Write-Host "[...] Starten van de Default Web Site" -ForegroundColor Yellow
+    Start-Website -Name "Default Web Site"
+    Write-Host "[OK] Default Web Site werd succesvol gestart" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] Default Web Site draait reeds" -ForegroundColor Green
+
+}
+
+# Toevoegen A-record voor website
+$existingRecord = Get-DnsServerResourceRecord -Name $hostRecord -ZoneName $forwardZone -RRType "A" -ErrorAction SilentlyContinue
+
+if (-not $existingRecord) {
+    Write-Host "[...] Toevoegen A-record '$hostRecord' voor '$ipWebserver'" -ForegroundColor Yellow
+    Add-DnsServerResourceRecordA -Name $hostRecord -ZoneName $forwardZone -IPv4Address $ipWebserver
+    Write-Host "[OK] A-record '$hostRecord' voor '$ipWebserver' werd succesvol toegevoegd" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] A-record '$hostRecord' voor '$ipWebserver' bestaat reeds" -ForegroundColor Green
+
+}
+
+#-------------------------------------------
+# Autorisatie DHCP server
+#-------------------------------------------
+
+Write-Host "`n=== AUTORISEREN DHCP server ===`n" -ForegroundColor Cyan
+
+# Installeren RSAT DHCP-beheermodule
+if (-not (Get-WindowsFeature -Name RSAT-DHCP).Installed) {
+    Write-Host "[...] Installeren RSAT-DHCP" -ForegroundColor Yellow
+    Install-WindowsFeature -Name RSAT-DHCP -IncludeManagementTools
+     Write-Host "[OK] RSAT-DHCP werd succesvol geïnstalleerd" -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] RSAT-DHCP werd reeds geïnstalleerd" -ForegroundColor Green
+
+}
+
+# Server3 autoriseren als DHCP server binnen het domein
+$isAuthorized = Invoke-Command -ComputerName "server1.WS26-JDV.hogent" -Credential $credentials -ScriptBlock {
+    Get-DhcpServerInDC | Where-Object { $_.IPAddress -eq "192.168.26.30" -or $_.DnsName -eq "server3.WS26-JDV.hogent" }
+}
+
+if (-not $isAuthorized) {
+    Write-Host "[...] Autoriseren server3 als DHCP-server in Active Directory" -ForegroundColor Yellow
+    Invoke-Command -ComputerName "server1.WS26-JDV.hogent" -Credential $credentials -ScriptBlock {
+        Add-DhcpServerInDC -DnsName "server3.WS26-JDV.hogent" -IPAddress "192.168.26.30"
+    }
+    Write-Host "[OK] Server3 werd succesvol geautoriseerd als DHCP-server in Active Directory." -ForegroundColor Green
+
+} else {
+    Write-Host "[OK] Server3 is reeds geautoriseerd als DHCP-server in Active Directory." -ForegroundColor Green
+
+}
