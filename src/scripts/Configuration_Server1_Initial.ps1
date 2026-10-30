@@ -83,7 +83,7 @@ Write-Host "`n=== CONFIGURATIE NETWERKINSTELLINGEN ===`n" -ForegroundColor Cyan
 $ifIndex = (Get-NetIPInterface -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq $hostonlyAdapter }).InterfaceIndex
 
 # Configuratie IP instellingen
-$huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Out-Null
+$huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue 
 
 if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
     Write-Host "[OK] De netwerkinstellingen werden reeds geconfigureerd" -ForegroundColor green
@@ -140,7 +140,7 @@ Write-Host "`n=== CONFIGURATIE ACTIVE DIRECTORY ===`n" -ForegroundColor Cyan
 if(-not (get-WindowsFeature AD-Domain-Services).Installed) {
     Write-Host "[...] Installeren AD-rol" -ForegroundColor Yellow
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
-    Write-Host "[OK] AD-rol werd succesvol geïnstalleerd" -ForegroundColor Green
+    Write-Host "`n[OK] AD-rol werd succesvol geïnstalleerd" -ForegroundColor Green
 
 } else {
     Write-Host "[OK] AD-rol werd reeds geïnstalleerd" -ForegroundColor Green
@@ -161,7 +161,8 @@ if(-not $isDC) {
        -DomainMode Win2025 `
        -InstallDns:$true `
        -SafeModeAdministratorPassword $SecureStringPassword `
-       -Force:$true
+       -Force:$true `
+       -NoRebootOnCompletion:$true
 
     Write-Host "[OK] Server werd succesvol gepromoveerd tot domeincontroller" -ForegroundColor Green
     Write-Host "[INFO] Server zal worden herstart" -ForegroundColor Yellow

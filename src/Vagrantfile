@@ -22,6 +22,7 @@
 #   and to install and configure the required software.
 # You are allowed to add lines for automatic provisioning.
 
+
 Vagrant.configure("2") do |config|
   # Server 1
   config.vm.define "server1" do |server1|
@@ -43,6 +44,21 @@ Vagrant.configure("2") do |config|
       # 2vCPU
       vb.cpus = "2"
     end
+
+    # Provisioning
+    server1.vm.provision "shell", name: "initial", path: "scripts/Configuration_Server1_Initial.ps1", privileged: true
+    server1.vm.provision "shell", reboot: true
+    # Wachten tot AD klaar is na de herstart (anders falen de AD-cmdlets in het services-script)
+    server1.vm.provision "shell", name: "wait-ad", privileged: true, inline: <<-'PS'
+      $max = 60; $i = 0
+      do {
+        Start-Sleep 10; $i++
+        $ok = try { Get-ADDomain -ErrorAction Stop } catch { $null }
+      } until ($ok -or $i -ge $max)
+      if (-not $ok) { Write-Error "AD was not ready after waiting"; exit 1 }
+      Write-Host "[OK] Active Directory is ready" -ForegroundColor Green
+    PS
+    server1.vm.provision "shell", name: "services", path: "scripts/Configuration_Server1_Services.ps1", privileged: true
   end
 
   # Server 2
@@ -57,6 +73,12 @@ Vagrant.configure("2") do |config|
       vb.memory = "2048"
       vb.cpus = "2"
     end
+
+    # Provisioning
+    server2.vm.provision "shell", name: "initial", path: "scripts/Configuration_Server2_Initial.ps1", privileged: true
+    server2.vm.provision "shell", reboot: true
+    server2.vm.provision "shell", name: "services", path: "scripts/Configuration_Server2_Services.ps1", privileged: true
+
   end
 
   # Server 3
@@ -71,6 +93,11 @@ Vagrant.configure("2") do |config|
       vb.memory = "2048"
       vb.cpus = "2"
     end
+
+    # Provisioning
+    server3.vm.provision "shell", name: "initial", path: "scripts/Configuration_Server3_initial.ps1", privileged: true
+    server3.vm.provision "shell", reboot: true
+    server3.vm.provision "shell", name: "services", path: "scripts/Configuration_Server3_Services.ps1", privileged: true
   end
 
   # Client
@@ -85,10 +112,18 @@ Vagrant.configure("2") do |config|
       vb.memory = "6144"
       vb.cpus = "4"
     end
+
+    # Provisioning
+    client.vm.provision "shell", name: "initial", path: "scripts/Configuration_Client_Initial.ps1", privileged: true
+    client.vm.provision "shell", name: "services", path: "scripts/Configuration_Client_Services.ps1", privileged: true
   end
 
   # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
   # Dan kan je eventueel de timeout aanpassen in onderstaande regel. De standaard timeout is 300 seconden (5 minuten), maar is nu al aangepast naar 600 seconden (10 minuten).
+  config.winrm.transport = :plaintext
+  config.winrm.basic_auth_only = true
   config.vm.boot_timeout = 2400
+  config.winrm.retry_limit = 100
+  config.winrm.retry_delay = 10
 end
   

@@ -73,14 +73,14 @@ Set-DnsClientServerAddress -InterfaceIndex $ifIndex -ResetServerAddresses
 Get-NetAdapter -InterfaceIndex $ifIndex | Restart-NetAdapter
 
 # Check wanneer client een geldig IP-adres heeft ontvangen
-Write-Host "- Wachten op IP-adres van de DHCP-server" -ForegroundColor Yellow
+Write-Host "[...] Wachten op IP-adres van de DHCP-server" -ForegroundColor Yellow
 do {
     Start-Sleep -Seconds 2
     $ipInfo = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
     $ip = $ipInfo.IPAddress
 } until ($ip -and $ip -notlike "169.254.*")
 
-Write-Host "- IP-adres succesvol verkregen: $ip" -ForegroundColor Yellow
+Write-Host "[OK] IP-adres succesvol verkregen: $ip" -ForegroundColor Green
 
 
 # Geef Host-only adapter een lagere metric
@@ -112,6 +112,6 @@ if ((Get-CimInstance Win32_ComputerSystem).Domain -eq $domein) {
 } else {
     Write-Host "[...] Client wordt toegevoegd aan $domein" -ForegroundColor Yellow
     Add-Computer -DomainName $domein -Credential $credentials -Restart -Force
-    Write-Host "[OK] Client werd succesvol toegevoegd aan $domein" -ForegroundColor Green
+    Write-Host "[OK] Client werd succesvol toegevoegd aan $domein`n" -ForegroundColor Green
 
 }

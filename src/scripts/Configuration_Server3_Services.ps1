@@ -40,7 +40,7 @@ Write-Host "`n=== CONFIGUREREN DHCP ===`n" -ForegroundColor Cyan
 if (-not (Get-WindowsFeature DHCP).Installed) {
     Write-Host "[...] Installeren DHCP-rol" -ForegroundColor Yellow
     Install-WindowsFeature -Name DHCP -IncludeManagementTools
-    Write-Host "[OK] DHCP-rol is geïnstalleerd" -ForegroundColor Green
+    Write-Host "`n[OK] DHCP-rol is geïnstalleerd" -ForegroundColor Green
 
 } else {
     Write-Host "[OK] DHCP-rol werd reeds geïnstalleerd" -ForegroundColor Green
@@ -136,7 +136,7 @@ Import-Module WebAdministration
 if (-not (Get-WebApplication -Name CertSrv)) {
     Write-Host "[...] Web enrollment wordt uitgevoerd" -ForegroundColor Yellow
     Install-AdcsWebEnrollment -Force | Out-Null
-    Write-Host "- [OK] Web enrollment werd succesvol uitgevoerd" -ForegroundColor Green
+    Write-Host "[OK] Web enrollment werd succesvol uitgevoerd" -ForegroundColor Green
 
 } else {
     Write-host "[OK] Web enrollment werd reeds uitgvoerd" -ForegroundColor Green
@@ -144,10 +144,10 @@ if (-not (Get-WebApplication -Name CertSrv)) {
 }
 
 # Toelaten HTTP
-Write-host "- [...] Laat HTTP toe om de CA te bereiken via de browser" -ForegroundColor Yellow
+Write-host "[...] Laat HTTP toe om de CA te bereiken via de browser" -ForegroundColor Yellow
 $appcmd = "$env:windir\System32\inetsrv\appcmd.exe"
 & $appcmd set config "Default Web Site/CertSrv" -section:access /sslFlags:None /commit:apphost | Out-Null
-Write-Host "- [OK] /CertSrv is bereikbaar via HTTP" -ForegroundColor Green
+Write-Host "[OK] /CertSrv is bereikbaar via HTTP" -ForegroundColor Green
 
 #------------------------------------------
 # Configuratie GPO - CA
@@ -178,15 +178,25 @@ Invoke-Command -ComputerName "server1.$domein" -Credential $credentials `
 
     # GPO aanmaken (alleen als hij nog niet bestaat)
     if (-not (Get-GPO -Name $gpoNaam -ErrorAction SilentlyContinue)) {
+        Write-host "[...] Aanmaken GPO: CA" -ForegroundColor Yellow
         New-GPO -Name $gpoNaam | Out-Null
+        Write-host "[OK] GPO werd succesvol aangemaakt" -ForegroundColor Green
+
+        # Certificaat en auto-enrollment in de GPO zetten
+        Write-Host "[...] Configureren GPO" -ForegroundColor Yellow
+        Set-GPRegistryValue -Name $gpoNaam -ValueName Blob -Type Binary -Value $blob `
+            -Key "HKLM\SOFTWARE\Policies\Microsoft\SystemCertificates\Root\Certificates\$thumb" | Out-Null
+        Set-GPRegistryValue -Name $gpoNaam -ValueName AEPolicy -Type DWord -Value 7 `
+            -Key "HKLM\SOFTWARE\Policies\Microsoft\Cryptography\AutoEnrollment" | Out-Null
+        Write-Host "[OK] GPO werd succesvol geconfigureerd" -ForegroundColor Green
+
+        # Koppelen aan het domein (een bestaande link geeft een fout die we negeren)
+        Write-Host "[...] GPO koppelen aan het domein" -ForegroundColor Yellow
+        New-GPLink -Name $gpoNaam -Target (Get-ADDomain).DistinguishedName -ErrorAction SilentlyContinue | Out-Null
+        Write-Host "[OK] GPO werd succesvol gekoppeld aan het domein" -ForegroundColor Green
+
+    } else {
+        Write-Host "[OK] GPO werd reeds aangemaakt en geconfigureerd" -ForegroundColor Green
+
     }
-
-    # Certificaat en auto-enrollment in de GPO zetten
-    Set-GPRegistryValue -Name $gpoNaam -ValueName Blob -Type Binary -Value $blob `
-        -Key "HKLM\SOFTWARE\Policies\Microsoft\SystemCertificates\Root\Certificates\$thumb" | Out-Null
-    Set-GPRegistryValue -Name $gpoNaam -ValueName AEPolicy -Type DWord -Value 7 `
-        -Key "HKLM\SOFTWARE\Policies\Microsoft\Cryptography\AutoEnrollment" | Out-Null
-
-    # Koppelen aan het domein (een bestaande link geeft een fout die we negeren)
-    New-GPLink -Name $gpoNaam -Target (Get-ADDomain).DistinguishedName -ErrorAction SilentlyContinue | Out-Null
 }

@@ -132,7 +132,7 @@ if ((Get-CimInstance Win32_ComputerSystem).Domain -eq $domein) {
 
 } else {
     Write-Host "[...] Server wordt toegevoegd aan $domein..." -ForegroundColor Yellow
-    Add-Computer -DomainName $domein -Credential $credentials -Restart -Force
-    Write-Host "[INFO] Server wordt herstart" -ForegroundColor Yellow
+    Add-Computer -DomainName $domein -Credential $credentials -Force
+    Write-Host "[INFO] Server wordt herstart`n" -ForegroundColor Yellow
 
 }

@@ -21,7 +21,7 @@ Write-Host "`n=== CONFIGURATIE SECUNDAIRE DNS ===`n" -ForegroundColor Cyan
 if (-not (Get-WindowsFeature DNS).Installed) {
     Write-Host "[...] Installeren DNS-rol" -ForegroundColor Yellow
     Install-WindowsFeature -Name DNS -IncludeManagementTools
-    Write-Host "[OK] DNS-rol werd succesvol geïnstalleerd" -ForegroundColor Green
+    Write-Host "`n[OK] DNS-rol werd succesvol geïnstalleerd" -ForegroundColor Green
 
 } else {
     Write-Host "[OK] DNS-rol werd reeds geïnstalleerd" -ForegroundColor Green
@@ -82,7 +82,9 @@ $reverseRecords = Get-DnsServerResourceRecord -ZoneName $reverseZone -ErrorActio
 if ($forwardRecords -and $reverseRecords) {
     Write-Host "[OK] Zonetransfer succesvol uitgevoerd" -ForegroundColor Green
 
+    Write-Host "OVERZICHT RECORDS - FORWARDZONE"
     $forwardRecords | Format-Table HostName, RecordType -AutoSize
+    Write-Host "OVERZICHT RECORDS - REVERSEZONE"
     $reverseRecords | Format-Table HostName, RecordType -AutoSize
 }
 else {

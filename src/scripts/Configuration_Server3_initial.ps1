@@ -79,7 +79,7 @@ Write-Host "`n=== CONFIGURATIE NETWERKINSTELLINGEN ===`n" -ForegroundColor Cyan
 $ifIndex = (Get-NetIPInterface -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq $hostonlyAdapter }).InterfaceIndex
 
 # Configuratie IP instellingen
-$huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Out-Null
+$huidig = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
 
 if ($huidig.IPAddress -eq $ipAdres -and $huidig.PrefixLength -eq $subnetMask) {
     Write-Host "[OK] De netwerkinstellingen werden reeds geconfigureerd" -ForegroundColor green
@@ -135,7 +135,7 @@ if ((Get-CimInstance Win32_ComputerSystem).Domain -eq $domein) {
 
 } else {
     Write-Host "[...] Server wordt toegevoegd aan $domein..." -ForegroundColor Yellow
-    Add-Computer -DomainName $domein -Credential $credentials -Restart -Force
-    Write-Host "[INFO] Server wordt herstart" -ForegroundColor Yellow
+    Add-Computer -DomainName $domein -Credential $credentials -Force
+    Write-Host "[INFO] Server wordt herstart`n" -ForegroundColor Yellow
 
 }

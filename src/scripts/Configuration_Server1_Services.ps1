@@ -300,7 +300,7 @@ Write-Host "`n=== CONFIGUREREN IIS WEBSERVER ===`n" -ForegroundColor Cyan
 if(-not (get-WindowsFeature Web-Server).Installed) {
     Write-Host "[...] Installeren van de IIS webserver rol" -ForegroundColor Yellow
     Install-WindowsFeature -Name Web-Server -IncludeManagementTools
-    Write-Host "[OK] De IIS webserver rol werd succesvol geïnstalleerd" -ForegroundColor Green
+    Write-Host "`n[OK] De IIS webserver rol werd succesvol geïnstalleerd" -ForegroundColor Green
 
 } else {
     Write-Host "[OK] De IIS webserver rol werd reeds geïnstalleerd" -ForegroundColor Green
@@ -352,7 +352,7 @@ Write-Host "`n=== AUTORISEREN DHCP server ===`n" -ForegroundColor Cyan
 if (-not (Get-WindowsFeature -Name RSAT-DHCP).Installed) {
     Write-Host "[...] Installeren RSAT-DHCP" -ForegroundColor Yellow
     Install-WindowsFeature -Name RSAT-DHCP -IncludeManagementTools
-     Write-Host "[OK] RSAT-DHCP werd succesvol geïnstalleerd" -ForegroundColor Green
+     Write-Host "`n[OK] RSAT-DHCP werd succesvol geïnstalleerd" -ForegroundColor Green
 
 } else {
     Write-Host "[OK] RSAT-DHCP werd reeds geïnstalleerd" -ForegroundColor Green
